@@ -109,17 +109,17 @@ def saveSnippet(topic, filename, duration, tinyurl):
 	videos.insert_one({'filename': filename, 'youtubeid': tinyurl, 'topic': topic, 'duration': duration, 'randompicked': "0"})
 
 def snippetPicker(topic, mode):
-	if mode == 1:
+	if mode == 2:
 		SKIP_RANGE = videos.find({'topic': topic,'randompicked': "0", 'duration': {"$lte": "3"}}).count()
-		print "SKIP_RANGE is:"+str(SKIP_RANGE)
+		#print "SKIP_RANGE is:"+str(SKIP_RANGE)
 		skipAmount = randint(0, SKIP_RANGE)
 		if (skipAmount == 0):
 			skipAmount = 1
-		print "skipAmount is: "+str(skipAmount) 
+		#print "skipAmount is: "+str(skipAmount) 
 		cursor = db.videos.find_one({'topic': topic,'randompicked': "0", 'duration': {"$lte": "3"}}, {'filename': 1, 'duration': 1, 'youtubeid': 1}, skip = skipAmount-1)
 		return cursor
 
-	elif mode == 2:
+	elif mode == 1:
 		SKIP_RANGE = videos.find({'topic': topic, 'randompicked': "0", 'duration': {"$gte": "5"}}).count()
 		#print "SKIP_RANGE is:"+str(SKIP_RANGE)
 		skipAmount = randint(0, SKIP_RANGE)
@@ -131,12 +131,12 @@ def snippetPicker(topic, mode):
 
 	elif mode == 3:
 		SKIP_RANGE = videos.find({'topic': topic,'randompicked': "0", 'duration': {"$gte": "6"}}).count()
-		print "SKIP_RANGE is:"+str(SKIP_RANGE)
+		#print "SKIP_RANGE is:"+str(SKIP_RANGE)
 		skipAmount = randint(0, SKIP_RANGE)
 		if (skipAmount == 0):
 			skipAmount = 1
-		print "skipAmount is: "+str(skipAmount) 
-		cursor = db.videos.find_one({'topic': topic,'randompicked': "0", 'duration': {"$lte": "6"}}, {'filename': 1, 'duration': 1, 'youtubeid': 1}, skip = skipAmount-1)
+		#print "skipAmount is: "+str(skipAmount) 
+		cursor = db.videos.find_one({'topic': topic,'randompicked': "0", 'duration': {"$lte": "5"}}, {'filename': 1, 'duration': 1, 'youtubeid': 1}, skip = skipAmount-1)
 		return cursor
 
 	

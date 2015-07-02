@@ -21,16 +21,10 @@ exportfiles = []
 #total loop length in seconds
 totalTime = 0
 
-#individual Times
+#individual Peak Times
+channelTIME = 0
+channelDONE = False
 
-ChannelONETime = 0
-ChannelTWOTime = 0
-ChannelTHREETime = 0
-ChannelFOURTime = 0
-channelONEdone = False
-channelTWOdone = False
-channelTHREEdone = False
-channelFOURdone = False
 durationChannelONE = 0
 
 #Multichannel settings
@@ -41,16 +35,55 @@ roundCounter = 1
 
 #default settings
 breakDuration = 1
-totalChannels = 4
+totalChannels = 6
+
+#automatic screenExtender
+screenExtender1 = 0
+screenExtender2 = 0
 
 
 def channelSetup(totalChannels):
+	global screenExtender1, screenExtender2
+	
 	print "\ncreating exportfiles:"
 	for channel in range(0, totalChannels):
 		otherChannels.append(channel)
 		filename = "channelFile"+str(channel+1)+".txt"
 		exportfiles.append(filename)
 		print "--> "+filename
+	
+	#gerade plus 1 alle zwei zahlen
+	if (totalChannels % 2 == 0):
+		base = totalChannels - 4
+		if (base != 0):
+			times = base / 2
+			screenExtender1 = 1+times		
+			print "screenExtender1.0: "+str(screenExtender1)
+	 	else:
+	 		screenExtender1 = 1
+	 		print "screenExtender1.1: "+str(screenExtender1)
+	#ungerade olus 1 alle zeit zahlen
+	elif (totalChannels % 2 == 1):
+		if (totalChannels > 5):
+			base = totalChannels - 5
+			times = base / 2
+			screenExtender1 = 1+times
+			print "screenExtender1.2: "+str(screenExtender1)
+		else:
+	 		screenExtender1 = 1
+	 		print "screenExtender1.3: "+str(screenExtender1)
+	else:
+	 	screenExtender2 = 0
+	 	print "screenExtender1.4: "+str(screenExtender1)
+
+	#plus 1 ab 6
+	if (totalChannels > 5):
+	 	times = totalChannels - 5
+	 	screenExtender3 = times
+	 	print "screenExtender2: "+str(screenExtender3)
+	else:
+	 	screenExtender3 = 0
+	 	print "screenExtender2: "+str(screenExtender3)
 
 
 def clearExportfiles():
@@ -109,8 +142,9 @@ def loadSnippetsToDb():
 	print "a total of "+str(contentSize)+" snippets are available." 
 
 
-def makeFiles():
+def makeFiles(screenExtender1, screenExtender2, screenExtender3):
 	global roundCounter
+	
 	#phase 1: 1 Channel, 3 sek breaks, > 5 sec clips. [30 sec]
 	#phase 2: 2 Channels, 3 sek breaks, > 5 sec clips. [30 sec]
 	#phase 3: 4 Channels, no breaks, 1-3 sec clips only. [1 min]
@@ -124,21 +158,31 @@ def makeFiles():
 		print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
 		# if topic is firsttopic do phase 1
 		#phase 1:
-		modeONE(topic, phaseLength = 30, activeChannels =  1, mode = 2, breaks = False, blacks = True)
-		print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
-		#phase 2:
-		modeONE(topic, phaseLength = totalTime + 60, activeChannels = 2, mode = 2, breaks = False, blacks = True)
-		print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
+		if (roundCounter == 1):
+			modeONE(topic, phaseLength = 30, activeChannels =  screenExtender1, mode = 1, breaks = False, blacks = True)
+			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
+			#phase 2:
+			modeONE(topic, phaseLength = totalTime + 60, activeChannels = screenExtender1+1, mode = 1, breaks = False, blacks = True)
+			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
+		else:
+			modeONE(topic, phaseLength = totalTime + 60, activeChannels = screenExtender1+1, mode = 1, breaks = False, blacks = True)
+			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
 		#phase 3:
-		modeTWO(topic, phaseLength = totalTime + 30, activeChannels = 4, mode = 1, breaks = False, blacks = False)
+		modeTWO(topic, phaseLength = totalTime + 30, activeChannels = totalChannels, mode = 2, breaks = False, blacks = False)
 		print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
 		#phase 4:
-		modeTHREE(topic, phaseLength = totalTime + 30, activeChannels = 3, mode = 3, breaks = True, blacks = True)
-		print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
-		#phase 5:
-		modeTHREE(topic, phaseLength = totalTime + 60, activeChannels = 2, mode = 3, breaks = True, blacks = True)
-		print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
-		roundCounter += 1
+		if (roundCounter != 5):
+			modeTHREE(topic, phaseLength = totalTime + 30, activeChannels = screenExtender2+3, mode = 3, breaks = True, blacks = True)
+			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
+			#phase 5:
+			modeTHREE(topic, phaseLength = totalTime + 60, activeChannels = screenExtender1+1, mode = 3, breaks = True, blacks = True)
+			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
+			roundCounter += 1
+		else:
+			modeONE(topic, phaseLength = totalTime + 60, activeChannels = screenExtender1+1, mode = 1, breaks = False, blacks = True)
+			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
+			modeONE(topic, phaseLength = 30, activeChannels =  screenExtender1, mode = 1, breaks = False, blacks = True)
+			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
 	#switching topic
 	#restarting
 	#if last topic phase 2 in the end instead of phase 5
@@ -148,8 +192,8 @@ def makeFiles():
 
 
 def modeTWO(topic, phaseLength, activeChannels, mode, breaks, blacks):
-	global totalTime, ChannelONETime
-	global channelONEdone
+	global totalTime, channelTIME
+	global channelDONE
 	global durationChannelONE
 	global channelSelectONE, channelSelectTWO
 	global diffenceBlack
@@ -169,18 +213,18 @@ def modeTWO(topic, phaseLength, activeChannels, mode, breaks, blacks):
 	if (counter != totalChannels):
 		for each in otherChannels:
 			print "counter is: "+str(counter)
-			channelONEdone = False
-			ChannelONETime = 0
+			channelDONE = False
+			channelTIME = 0
 			print "working on channel "+str(each+1)
-			while (channelONEdone == False):
-				print "ChannelONETime is: "+str(ChannelONETime)
-				durationDifference = (phaseLength - totalTime) - ChannelONETime
+			while (channelDONE == False):
+				print "channelTIME is: "+str(channelTIME)
+				durationDifference = (phaseLength - totalTime) - channelTIME
 				print "durationDifference is "+str(durationDifference)
 				if (durationDifference > 5):
 					dataset1 = mongo.snippetPicker(topic, mode)
 					if dataset1 is not None:
 						durationChannelONE = snippetProcessing(topic, dataset1, each, True)
-						ChannelONETime += durationChannelONE
+						channelTIME += durationChannelONE
 					else:
 						print "no more snippets in mongodb."
 				else:
@@ -192,14 +236,14 @@ def modeTWO(topic, phaseLength, activeChannels, mode, breaks, blacks):
 							snippetProcessing(topic, dataset1, each, False)
 							print "added fitting snipped\ndone with channelONE."
 							print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
-							channelONEdone = True
+							channelDONE = True
 							counter += 1
 						else:
 							print "couldn't find a fitting snippet for channel 1."
 					else:
 						print "already fitting\ndone with channelONE."
 						print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
-						channelONEdone = True
+						channelDONE = True
 						counter += 1
 	print "all channels are done with peak sequence."
 	totalTime += timeDifference
@@ -207,6 +251,8 @@ def modeTWO(topic, phaseLength, activeChannels, mode, breaks, blacks):
 
 
 def modeTHREE(topic, phaseLength, activeChannels, mode, breaks, blacks):
+	# -----> make it variable with activeChannels!
+
 	global totalTime
 	global durationChannelONE
 	global channelSelectONE, channelSelectTWO
@@ -332,6 +378,8 @@ def modeTHREE(topic, phaseLength, activeChannels, mode, breaks, blacks):
 
 
 def modeONE(topic, phaseLength, activeChannels, mode, breaks, blacks):
+	# -----> make it variable with activeChannels!
+
 	global totalTime
 	global durationChannelONE
 	global channelSelectONE, channelSelectTWO
@@ -476,20 +524,24 @@ def makeVideo():
 
 if __name__ == '__main__':
 	#mongo
-	mongo.init()
-	mongo.dropAndReconnect()
+	#mongo.init()
+	#mongo.dropAndReconnect()
 
 	#cleanup and load
-	clearExportfiles()
-	channelSetup(totalChannels)
-	loadSnippetsToDb()
+	#clearExportfiles()
 	
-	#write new files
-	makeFiles()
+	if (totalChannels >= 4):
+		channelSetup(totalChannels)
+		#loadSnippetsToDb()
 	
-	#cleanup and write new videos
-	#clearOutputfiles()
-	#makeVideo()
+		#write new files
+		#makeFiles()
+	
+		#cleanup and write new videos
+		#clearOutputfiles()
+		#makeVideo()
+	else:
+		print "totalChannels is to low, 4 channels are minimum."
 
 
 
