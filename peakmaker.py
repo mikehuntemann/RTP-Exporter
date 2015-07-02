@@ -142,16 +142,9 @@ def loadSnippetsToDb():
 	print "a total of "+str(contentSize)+" snippets are available." 
 
 
-def makeFiles(screenExtender1, screenExtender2, screenExtender3):
-	global roundCounter
-	
-	#phase 1: 1 Channel, 3 sek breaks, > 5 sec clips. [30 sec]
-	#phase 2: 2 Channels, 3 sek breaks, > 5 sec clips. [30 sec]
-	#phase 3: 4 Channels, no breaks, 1-3 sec clips only. [1 min]
-	#phase 4: 3 Channels [2-1 Topics], 3 sec breaks, > 5 sec clips [30 sec]
-	#phase 5: 2 Channels [1-1 Topics], 3 sec breaks, > 5 sec clips [30 sec]
-	#phase 6: phase 2.
-	#repeat.
+def makeFiles():
+	global roundCounter, totalChannels
+	global screenExtender1, screenExtender2
 	
 	for topic in collection:
 		print "working on topic: "+topic+"." 
@@ -183,9 +176,6 @@ def makeFiles(screenExtender1, screenExtender2, screenExtender3):
 			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
 			modeONE(topic, phaseLength = 30, activeChannels =  screenExtender1, mode = 1, breaks = False, blacks = True)
 			print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \n"
-	#switching topic
-	#restarting
-	#if last topic phase 2 in the end instead of phase 5
 	
 	print "Total project length is "+ str(totalTime)+" seconds."
 	print "file done."
@@ -202,7 +192,7 @@ def modeTWO(topic, phaseLength, activeChannels, mode, breaks, blacks):
 	timeDifference = phaseLength - totalTime
 	
 
-	print "entering mode 1. \n"
+	print "entering mode 2. \n"
 	print "totalTime is:"
 	print totalTime
 	print "phaseLength:"
@@ -251,135 +241,80 @@ def modeTWO(topic, phaseLength, activeChannels, mode, breaks, blacks):
 
 
 def modeTHREE(topic, phaseLength, activeChannels, mode, breaks, blacks):
-	# -----> make it variable with activeChannels!
 
 	global totalTime
 	global durationChannelONE
 	global channelSelectONE, channelSelectTWO
 	global diffenceBlack
-	global nextTopic, roundCounter
+	global roundCounter
+	
+	oldTopic = (activeChannels / 2) + 1
+	newTopic = activeChannels - oldTopic
+
 	timeDifference = phaseLength - totalTime
 
 	while (totalTime < phaseLength):
 		print "totalTime: "+str(totalTime)
 		print "phaseLength: "+str(phaseLength)
 		print "timeDifference: "+str(timeDifference)
-		print "roundCounter: "+str(roundCounter)
 		channelSelectONE = channelSelectTWO
-	
-		if (activeChannels == 3):
-			print "three channels active."
-			availableChannels = []
-			if (totalChannels == 4):
-				channelSelectONE = randint(0, totalChannels-1)
-				print "channel "+str(channelSelectONE+1)+" is going to be ignored."
-				for channel in otherChannels:
-					if (channel != channelSelectONE):
-						availableChannels.append(channel)
-			else:
-				while (channelSelectONE == channelSelectTWO):
-					channelSelectONE = randint(0, totalChannels-1)
-					channelSelectTWO = randint(0, totalChannels-1)
-				print "channel "+str(channelSelectONE+1)+" and "+str(channelSelectTWO+1)+" are going to be ignored."
-				for channel in otherChannels:
-					if (channel != channelSelectONE):
-						if (channel != channelSelectTWO):
-							availableChannels.append(channel)
-			print availableChannels
-			
-			#mode = snippets which are 6 seconds and below.
-			print "\nprocessing first snippet."
-			dataset1 = mongo.snippetPicker(topic, mode)
-			firstLane = availableChannels[0]
-			print "channel "+str(firstLane+1)+" for first snippet."
-			durationChannelONE = snippetProcessing(topic, dataset1, firstLane, buffer = True)
-			
-			#same topic, same length
-			print "\nprocessing second snippet."
-			dataset2 = mongo.snippetFitter(topic, str(durationChannelONE))
-			secondLane = availableChannels[1]
-			print "channel "+str(secondLane+1)+" for second snippet."
-			print "topic is: "+str(topic)
-			snippetProcessing(topic = topic, dataset = dataset2, channelSelect = secondLane, buffer = False)
 
-			#next topic, same length
-			print "\nprocessing third snippet."
-			nextONE = nextTopic[roundCounter]
-			print "topic is: "+str(nextONE)
-			thirdLane = availableChannels[2]
-			print "channel "+str(thirdLane+1)+" for third snippet."
-			dataset3 = mongo.snippetFitter(nextONE, str(durationChannelONE))
-			snippetProcessing(topic = nextONE, dataset = dataset3, channelSelect = thirdLane, buffer = False)
-			print ""
-			if (totalChannels == 4):
-				blacksAdder(blacks, durationChannelONE, channelSelectONE)
-			else:
-				blacksAdder(blacks, durationChannelONE, channelSelectONE)
-				blacksAdder(blacks, durationChannelONE, channelSelectTWO)
-			print ""
-			breaksToAll(breaks, breakDuration)
-			totalTime += durationChannelONE
-			print "\n--------------------------"
-		
-		if (activeChannels == 2):
-			print "two channels active."
-			dataset1 = mongo.snippetPicker(topic, mode)
-			nextONE = nextTopic[roundCounter]
-			dataset2 = mongo.snippetPicker(nextONE, mode)
-			#random select 2 different channels with different content
-			while (channelSelectONE == channelSelectTWO):
-				channelSelectONE = randint(0, totalChannels-1)
-				channelSelectTWO = randint(0, totalChannels-1)
-			print "writing first snippet on channel "+str(channelSelectONE+1)+"."
-			print "writing second snippet on channel "+str(channelSelectTWO+1)+"."
-			#for each channel grab a snippet (!problem: different length but need the same length when adding blacks!)
-			durationChannelONE = snippetProcessing(topic, dataset1, channelSelectONE, True)
-			print "durationChannelONE is: "+str(durationChannelONE)
-			durationChannelTWO = snippetProcessing(nextONE, dataset2, channelSelectTWO, True)
-			print "durationChannelTWO is: "+str(durationChannelTWO)
-			#duration comparison, then adding the difference to the shorter snippet, adding the bigger duration as black to empty channels
-			if (durationChannelONE != durationChannelTWO):
-				if (durationChannelONE > durationChannelTWO):
-					diffenceBlack = durationChannelONE - durationChannelTWO
-					print "channelONE is "+str(diffenceBlack)+" seconds longer than channelTWO."
-					blacksAdder(True, diffenceBlack, channelSelectTWO)
-					totalTime += durationChannelONE
-					for channel in otherChannels:
-						if (channel != channelSelectONE):
-							if (channel != channelSelectTWO):
-								blacksAdder(blacks, durationChannelONE, channel)
-							else:
-								print "channel "+str(channel+1)+" is skipped."
-						else:
-							print "channel "+str(channel+1)+" is skipped."
+		channelSelect = randint(0, activeChannels-1)
+		channelsPicked = []
+		channelsPicked.append(channelSelect)
+
+		print str(oldTopic)+" channels active for current topic."
+		dataset = mongo.snippetPicker(topic, mode)
+		durationChannelONE = snippetProcessing(topic, dataset, channelSelect, True)
+		print "writing snippet on channel "+str(channelSelect+1)+"."
+
+		if (activeChannels != 1):
+			print "\nadding channels with current topic content."
+			for channel in range(oldTopic-1):
+				newChannelSelect = randint(0, totalChannels-1)
+				while (newChannelSelect in pickedChannel):
+					newChannelSelect = randint(0, totalChannels-1)
+				channelsPicked.append(newChannelSelect)
+				durationONE = str(durationChannelONE)
+				dataset = mongo.snippetFill(topic, durationONE)
+				if dataset is not None:
+					durationFill = mongo.snippetProcessing(topic, dataset, channel, True)
+					blackDuration = durationChannelONE - durationFill
+					if (blackDuration != 0):
+						blacksAdder(blacks, blackDuration, channel)
+					else:
+						print "no black fills needed."
 				else:
-					diffenceBlack = durationChannelTWO - durationChannelONE
-					print "channelTWO is "+str(diffenceBlack)+" seconds longer than channelONE."
-					print "adding "+str(diffenceBlack)+" seconds to channelONE."
-					blacksAdder(True, diffenceBlack, channelSelectONE)
-					totalTime += durationChannelTWO
-					for channel in otherChannels:
-						if (channel != channelSelectONE):
-							if (channel != channelSelectTWO):
-								blacksAdder(blacks, durationChannelTWO, channel)
-							else:
-								print "channel "+str(channel+1)+" is skipped."
-						else:
-							print "channel "+str(channel+1)+" is skipped."
-			#duration is equal, just filling the empty channels with black
-			else:
-				print "duration of both channels are equal."
-				totalTime += durationChannelONE
-				for channel in otherChannels:
-					if (channel != channelSelectONE):
-						if (channel != channelSelectTWO):
-							blacksAdder(blacks, durationChannelONE, channel)
-			breaksToAll(breaks, breakDuration)
+					print "not enough snippets for snippetFill."
+
+			print "\nadding channels with next topic content."
+			for channel in range(newTopic-1):
+				newChannelSelect = randint(0, totalChannels-1)
+				while (newChannelSelect in pickedChannel):
+					newChannelSelect = randint(0, totalChannels-1)
+				channelsPicked.append(newChannelSelect)
+				nextONE = nextTopic[roundCounter]
+				dataset = mongo.snippetFill(nextONE, durationONE)
+				if dataset is not None:
+					durationFill = mongo.snippetProcessing(nextONE, dataset, channel, True)
+					blackDuration = durationChannelONE - durationFill
+					if (blackDuration != 0):
+						blacksAdder(blacks, blackDuration, channel)
+					else:
+						print "no black fills needed."
+				else:
+					print "not enough snippets for snippetFill."
+
+		for emptyChannel in range(0, totalChannels-1):
+				if (emptyChannel not in channelsPicked):
+					blacksAdder(blacks, durationChannelONE, emptyChannel)
+
+		breaksToAll(breaks, breakDuration)					
+
+
 
 
 def modeONE(topic, phaseLength, activeChannels, mode, breaks, blacks):
-	# -----> make it variable with activeChannels!
-
 	global totalTime
 	global durationChannelONE
 	global channelSelectONE, channelSelectTWO
@@ -393,76 +328,111 @@ def modeONE(topic, phaseLength, activeChannels, mode, breaks, blacks):
 		print "timeDifference: "+str(timeDifference)
 		channelSelectONE = channelSelectTWO
 
-		if (activeChannels == 1):
-			print "one channel active."
-			dataset = mongo.snippetPicker(topic, mode)
-			#random channel 0 to 3 in otherChannel to select .txt file
-			channelSelect = randint(0, totalChannels-1)
-			print "writing snippet on channel "+str(channelSelect+1)+"."
-			blackDuration = snippetProcessing(topic, dataset, channelSelect, True)
-			totalTime += blackDuration
-			for channel in otherChannels:
-				if (channel != channelSelect):
-					blacksAdder(blacks, blackDuration, channel)
+
+		channelSelect = randint(0, totalChannels-1)
+		channelsPicked = []
+		channelsPicked.append(channelSelect)
+
+		print str(activeChannels)+" channels active."
+		dataset = mongo.snippetPicker(topic, mode)
+		durationChannelONE = snippetProcessing(topic, dataset, channelSelect, True)
+		print "writing snippet on channel "+str(channelSelect+1)+"."
+
+		if (activeChannels != 1):
+
+			for channel in (activeChannels-1):
+				newChannelSelect = randint(0, totalChannels-1)
+				while (newChannelSelect in pickedChannel):
+					newChannelSelect = randint(0, totalChannels-1)
+				channelsPicked.append(newChannelSelect)
+				durationONE = str(durationChannelONE)
+				dataset = mongo.snippetFill(topic, durationONE)
+				if dataset is not None:
+					durationFill = mongo.snippetProcessing(topic, dataset, channel, True)
+					blackDuration = durationChannelONE - durationFill
+					if (blackDuration != 0):
+						blacksAdder(blacks, blackDuration, channel)
+					else:
+						print "no black fills needed."
 				else:
-					print "channel "+str(channel+1)+" was skipped."
-			breaksToAll(breaks, breakDuration)
-			print ""
-		
-		if (activeChannels == 2):
-			print "two channels active.\n"
-			dataset1 = mongo.snippetPicker(topic, mode)
-			dataset2 = mongo.snippetPicker(topic, mode)
-			#random select 2 different channels with different content
-			while (channelSelectONE == channelSelectTWO):
-				channelSelectONE = randint(0, totalChannels-1)
-				channelSelectTWO = randint(0, totalChannels-1)
-			print "writing first snippet on channel "+str(channelSelectONE+1)+"."
-			print "writing second snippet on channel "+str(channelSelectTWO+1)+"."
-			#for each channel grab a snippet (!problem: different length but need the same length when adding blacks!)
-			durationChannelONE = snippetProcessing(topic, dataset1, channelSelectONE, True)
-			print "durationChannelONE is: "+str(durationChannelONE)
-			durationChannelTWO = snippetProcessing(topic, dataset2, channelSelectTWO, True)
-			print "durationChannelTWO is: "+str(durationChannelTWO)
-			#duration comparison, then adding the difference to the shorter snippet, adding the bigger duration as black to empty channels
-			if (durationChannelONE != durationChannelTWO):
-				if (durationChannelONE > durationChannelTWO):
-					diffenceBlack = durationChannelONE - durationChannelTWO
-					print "channelONE is "+str(diffenceBlack)+" seconds longer than channelTWO."
-					blacksAdder(True, diffenceBlack, channelSelectTWO)
-					totalTime += durationChannelONE
-					for channel in otherChannels:
-						if (channel != channelSelectONE):
-							if (channel != channelSelectTWO):
-								blacksAdder(blacks, durationChannelONE, channel)
-							else:
-								print "channel "+str(channel+1)+" is skipped."
-						else:
-							print "channel "+str(channel+1)+" is skipped."
+					print "not enough snippets for snippetFill."
+
+		for emptyChannel in range(0, totalChannels-1):
+				if (emptyChannel not in channelsPicked):
+					blacksAdder(blacks, durationChannelONE, emptyChannel)
+
+		breaksToAll(breaks, breakDuration)	
+
+def modeFOUR(topic, phaseLength, activeChannels, mode, breaks, blacks):
+	global totalTime
+	global durationChannelONE
+	global channelSelectONE, channelSelectTWO
+	global diffenceBlack
+	global roundCounter
+	
+	oldTopic = (activeChannels / 2)
+	newTopic = activeChannels - oldTopic
+
+	timeDifference = phaseLength - totalTime
+
+	while (totalTime < phaseLength):
+		print "totalTime: "+str(totalTime)
+		print "phaseLength: "+str(phaseLength)
+		print "timeDifference: "+str(timeDifference)
+		channelSelectONE = channelSelectTWO
+
+		channelSelect = randint(0, activeChannels-1)
+		channelsPicked = []
+		channelsPicked.append(channelSelect)
+
+		print str(oldTopic)+" channels active for current topic."
+		dataset = mongo.snippetPicker(topic, mode)
+		durationChannelONE = snippetProcessing(topic, dataset, channelSelect, True)
+		print "writing snippet on channel "+str(channelSelect+1)+"."
+
+		if (activeChannels != 1):
+			print "\nadding channels with current topic content."
+			for channel in range(oldTopic-1):
+				newChannelSelect = randint(0, totalChannels-1)
+				while (newChannelSelect in pickedChannel):
+					newChannelSelect = randint(0, totalChannels-1)
+				channelsPicked.append(newChannelSelect)
+				durationONE = str(durationChannelONE)
+				dataset = mongo.snippetFill(topic, durationONE)
+				if dataset is not None:
+					durationFill = mongo.snippetProcessing(topic, dataset, channel, True)
+					blackDuration = durationChannelONE - durationFill
+					if (blackDuration != 0):
+						blacksAdder(blacks, blackDuration, channel)
+					else:
+						print "no black fills needed."
 				else:
-					diffenceBlack = durationChannelTWO - durationChannelONE
-					print "channelTWO is "+str(diffenceBlack)+" seconds longer than channelONE."
-					print "adding "+str(diffenceBlack)+" seconds to channelONE."
-					blacksAdder(True, diffenceBlack, channelSelectONE)
-					totalTime += durationChannelTWO
-					for channel in otherChannels:
-						if (channel != channelSelectONE):
-							if (channel != channelSelectTWO):
-								blacksAdder(blacks, durationChannelTWO, channel)
-							else:
-								print "channel "+str(channel+1)+" is skipped."
-						else:
-							print "channel "+str(channel+1)+" is skipped."
-			#duration is equal, just filling the empty channels with black
-			else:
-				print "duration of both channels are equal."
-				totalTime += durationChannelONE
-				for channel in otherChannels:
-					if (channel != channelSelectONE):
-						if (channel != channelSelectTWO):
-							blacksAdder(blacks, durationChannelONE, channel)
-			breaksToAll(breaks, breakDuration)
-			print ""
+					print "not enough snippets for snippetFill."
+
+			print "\nadding channels with next topic content."
+			for channel in range(newTopic-1):
+				newChannelSelect = randint(0, totalChannels-1)
+				while (newChannelSelect in pickedChannel):
+					newChannelSelect = randint(0, totalChannels-1)
+				channelsPicked.append(newChannelSelect)
+				nextONE = nextTopic[roundCounter]
+				dataset = mongo.snippetFill(nextONE, durationONE)
+				if dataset is not None:
+					durationFill = mongo.snippetProcessing(nextONE, dataset, channel, True)
+					blackDuration = durationChannelONE - durationFill
+					if (blackDuration != 0):
+						blacksAdder(blacks, blackDuration, channel)
+					else:
+						print "no black fills needed."
+				else:
+					print "not enough snippets for snippetFill."
+
+		for emptyChannel in range(0, totalChannels-1):
+				if (emptyChannel not in channelsPicked):
+					blacksAdder(blacks, durationChannelONE, emptyChannel)
+
+		breaksToAll(breaks, breakDuration)					
+
 
 def snippetProcessing(topic, dataset, channelSelect, buffer):
 	global totalTime

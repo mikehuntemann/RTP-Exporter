@@ -153,3 +153,13 @@ def snippetFitter(topic, duration):
 		skipAmount = 1
 	cursor = db.videos.find_one({'randompicked': "0", 'topic': topic, 'duration': duration}, {'filename': 1, 'duration': 1, 'youtubeid': 1}, skip = skipAmount-1)
 	return cursor
+
+def snippetFill(topic, duration):
+	SKIP_RANGE = videos.find({'topic': topic, 'duration': duration, 'randompicked': "0"}).count()
+	print "SKIP_RANGE is:"+str(SKIP_RANGE)
+	skipAmount = randint(0, SKIP_RANGE)
+	print "skipAmount is: "+str(skipAmount) 
+	if (skipAmount == 0):
+		skipAmount = 1
+	cursor = db.videos.find_one({'randompicked': "0", 'topic': topic, 'duration': {"$lte": duration }}, {'filename': 1, 'duration': 1, 'youtubeid': 1}, skip = skipAmount-1)
+	return cursor
